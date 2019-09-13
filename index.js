@@ -15,7 +15,8 @@ const util = require('util')
 
 const daemon = new TurtleCoind({
   host: Config.daemon.host,
-  port: Config.daemon.port
+  port: Config.daemon.port,
+  timeout: Config.daemon.timeout
 })
 
 const publicRabbitHost = process.env.RABBIT_PUBLIC_SERVER || 'localhost'
