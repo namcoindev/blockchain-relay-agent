@@ -113,7 +113,7 @@ if (cluster.isMaster) {
                 correlationId: message.properties.correlationId
               })
 
-              return publicChannel.nack(message)
+              return publicChannel.ack(message)
             })
           } else if (payload.blockBlob) {
             /* Attempt to send the block to the requested daemon */
@@ -141,7 +141,7 @@ if (cluster.isMaster) {
                 correlationId: message.properties.correlationId
               })
 
-              return publicChannel.nack(message)
+              return publicChannel.ack(message)
             })
           } else if (payload.walletAddress && payload.reserveSize) {
             /* Attempt to get the block template from the requested daemon */
@@ -170,7 +170,7 @@ if (cluster.isMaster) {
                 correlationId: message.properties.correlationId
               })
 
-              return publicChannel.nack(message)
+              return publicChannel.ack(message)
             })
           } else {
             /* We don't know how to handle this */
