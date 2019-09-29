@@ -40,7 +40,7 @@ if (cluster.isMaster) {
     spawnNewWorker()
   })
 } else if (cluster.isWorker) {
-  const rabbit = new RabbitMQ(process.env.RABBIT_PUBLIC_SERVER || 'localhost', process.env.RABBIT_PUBLIC_USERNAME || '', process.env.RABBIT_PUBLIC_PASSWORD || '')
+  const rabbit = new RabbitMQ(process.env.RABBIT_PUBLIC_SERVER || 'localhost', process.env.RABBIT_PUBLIC_USERNAME || '', process.env.RABBIT_PUBLIC_PASSWORD || '', false)
 
   rabbit.on('log', log => {
     Helpers.log(util.format('[RABBIT] %s', log))
@@ -48,6 +48,11 @@ if (cluster.isMaster) {
 
   rabbit.on('connect', () => {
     Helpers.log(util.format('[RABBIT] connected to server at %s', process.env.RABBIT_PUBLIC_SERVER || 'localhost'))
+  })
+
+  rabbit.on('disconnect', (error) => {
+    Helpers.log(util.format('[RABBIT] lost connected to server: %s', error.toString()))
+    cluster.worker.kill()
   })
 
   rabbit.on('message', (queue, message, payload) => {
