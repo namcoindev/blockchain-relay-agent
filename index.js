@@ -9,10 +9,9 @@ const cluster = require('cluster')
 require('colors')
 const Config = require('./config.json')
 const cpuCount = Math.ceil(require('os').cpus().length / 8)
-const Helpers = require('./lib/helpers.js')
-const RabbitMQ = require('./lib/rabbit.js')
+const Logger = require('./lib/logger')
+const RabbitMQ = require('./lib/rabbit')
 const TurtleCoind = require('turtlecoin-rpc').TurtleCoind
-const util = require('util')
 
 const daemon = new TurtleCoind({
   host: Config.daemon.host,
@@ -26,17 +25,17 @@ function spawnNewWorker () {
 
 if (cluster.isMaster) {
   if (!process.env.NODE_ENV || process.env.NODE_ENV.toLowerCase() !== 'production') {
-    Helpers.log('[WARNING] Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production'.yellow)
+    Logger.warning('[WARNING] Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production')
   }
 
-  Helpers.log('Starting TurtlePay Blockchain Relay Agent...')
+  Logger.log('Starting TurtlePay Blockchain Relay Agent...')
 
   for (var cpuThread = 0; cpuThread < cpuCount; cpuThread++) {
     spawnNewWorker()
   }
 
   cluster.on('exit', (worker, code, signal) => {
-    Helpers.log(util.format('worker %s died', worker.process.pid))
+    Logger.error('Worker %s died', worker.process.pid)
     spawnNewWorker()
   })
 } else if (cluster.isWorker) {
@@ -48,15 +47,15 @@ if (cluster.isMaster) {
   )
 
   rabbit.on('log', log => {
-    Helpers.log(util.format('[RABBIT] %s', log))
+    Logger.log('[RABBIT] %s', log)
   })
 
   rabbit.on('connect', () => {
-    Helpers.log(util.format('[RABBIT] connected to server at %s', process.env.RABBIT_PUBLIC_SERVER || 'localhost'))
+    Logger.log('[RABBIT] connected to server at %s', process.env.RABBIT_PUBLIC_SERVER || 'localhost')
   })
 
   rabbit.on('disconnect', (error) => {
-    Helpers.log(util.format('[RABBIT] lost connected to server: %s', error.toString()))
+    Logger.error('[RABBIT] lost connected to server: %s', error.toString())
     cluster.worker.kill()
   })
 
@@ -74,15 +73,15 @@ if (cluster.isMaster) {
         .then(() => {
         /* We got a response to the request, we're done here */
           if (response.status.toUpperCase() === 'OK') {
-            Helpers.log(util.format('[INFO] Worker #%s relayed transaction [%s] via %s:%s [%s]', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status).green)
+            Logger.info('Worker #%s relayed transaction [%s] via %s:%s [%s]', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status)
           } else {
-            Helpers.log(util.format('[INFO] Worker #%s relayed transaction [%s] via %s:%s [%s] %s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status, response.error || '').red)
+            Logger.warning('Worker #%s relayed transaction [%s] via %s:%s [%s] %s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status, response.error || '')
           }
-          return rabbit.ack(message)
         })
+        .then(() => { return rabbit.ack(message) })
         .catch(error => {
         /* An error occurred */
-          Helpers.log(util.format('[INFO] Worker #%s failed to relay transaction [%s] via %s:%s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port).yellow)
+          Logger.error('Worker #%s failed to relay transaction [%s] via %s:%s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port)
 
           const reply = { error: error.toString() }
 
@@ -95,11 +94,11 @@ if (cluster.isMaster) {
         blockBlob: payload.blockBlob
       })
         .then(response => { return rabbit.reply(message, response) })
-        .then(() => Helpers.log(util.format('[INFO] Worker #%s submitted block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port).green))
+        .then(() => Logger.info('Worker #%s submitted block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port))
         .then(() => { return rabbit.ack(message) })
         .catch(error => {
         /* An error occurred */
-          Helpers.log(util.format('[INFO] Worker #%s failed to submit block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port).red)
+          Logger.error('Worker #%s failed to submit block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port)
 
           const reply = {
             error: error.toString()
@@ -115,10 +114,10 @@ if (cluster.isMaster) {
         reserveSize: payload.reserveSize
       })
         .then(response => { return rabbit.reply(message, response) })
-        .then(() => Helpers.log(util.format('[INFO] Worker #%s received blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port).green))
+        .then(() => Logger.info('Worker #%s received blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port))
         .then(() => { return rabbit.ack(message) })
         .catch(error => {
-          Helpers.log(util.format('[INFO] Worker #%s failed retrieve blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port).red)
+          Logger.error('Worker #%s failed retrieve blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port)
 
           const reply = { error: error.toString() }
 
@@ -133,9 +132,9 @@ if (cluster.isMaster) {
   rabbit.connect()
     .then(() => { return rabbit.createQueue(Config.queues.relayAgent, true) })
     .then(() => { return rabbit.registerConsumer(Config.queues.relayAgent, 1) })
-    .then(() => Helpers.log(util.format('Worker #%s awaiting requests', cluster.worker.id)))
+    .then(() => Logger.log('Worker #%s awaiting requests', cluster.worker.id))
     .catch(error => {
-      Helpers.log(util.format('Error in worker #%s: %s', cluster.worker.id, error.toString()))
+      Logger.error('Error in worker #%s: %s', cluster.worker.id, error.toString())
       cluster.worker.kill()
     })
 }
