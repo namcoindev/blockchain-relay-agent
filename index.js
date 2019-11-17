@@ -25,7 +25,7 @@ function spawnNewWorker () {
 
 if (cluster.isMaster) {
   if (!process.env.NODE_ENV || process.env.NODE_ENV.toLowerCase() !== 'production') {
-    Logger.warning('[WARNING] Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production')
+    Logger.warning('Node.js is not running in production mode. Consider running in production mode: export NODE_ENV=production')
   }
 
   Logger.log('Starting TurtlePay Blockchain Relay Agent...')
