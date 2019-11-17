@@ -40,7 +40,12 @@ if (cluster.isMaster) {
     spawnNewWorker()
   })
 } else if (cluster.isWorker) {
-  const rabbit = new RabbitMQ(process.env.RABBIT_PUBLIC_SERVER || 'localhost', process.env.RABBIT_PUBLIC_USERNAME || '', process.env.RABBIT_PUBLIC_PASSWORD || '', false)
+  const rabbit = new RabbitMQ(
+    process.env.RABBIT_PUBLIC_SERVER || 'localhost',
+    process.env.RABBIT_PUBLIC_USERNAME || '',
+    process.env.RABBIT_PUBLIC_PASSWORD || '',
+    false
+  )
 
   rabbit.on('log', log => {
     Helpers.log(util.format('[RABBIT] %s', log))
@@ -61,99 +66,76 @@ if (cluster.isMaster) {
       var response
 
       /* Try to relay it to the daemon */
-      daemon.sendRawTransaction({
+      return daemon.sendRawTransaction({
         tx: payload.rawTransaction
-      }).then((resp) => {
-        response = resp
-        return rabbit.sendToQueue(message.properties.replyTo, response, {
-          correlationId: message.properties.correlationId
-        })
-      }).then(() => {
-        /* We got a response to the request, we're done here */
-        if (response.status.toUpperCase() === 'OK') {
-          Helpers.log(util.format('[INFO] Worker #%s relayed transaction [%s] via %s:%s [%s]', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status).green)
-        } else {
-          Helpers.log(util.format('[INFO] Worker #%s relayed transaction [%s] via %s:%s [%s] %s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status, response.error || '').red)
-        }
-        return rabbit.ack(message)
-      }).catch((error) => {
-        /* An error occurred */
-        Helpers.log(util.format('[INFO] Worker #%s failed to relay transaction [%s] via %s:%s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port).yellow)
-
-        const reply = {
-          error: error.toString()
-        }
-
-        rabbit.sendToQueue(message.properties.replyTo, reply, {
-          correlationId: message.properties.correlationId
-        })
-
-        return rabbit.ack(message)
       })
+        .then(resp => { response = resp })
+        .then(() => { return rabbit.reply(message, response) })
+        .then(() => {
+        /* We got a response to the request, we're done here */
+          if (response.status.toUpperCase() === 'OK') {
+            Helpers.log(util.format('[INFO] Worker #%s relayed transaction [%s] via %s:%s [%s]', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status).green)
+          } else {
+            Helpers.log(util.format('[INFO] Worker #%s relayed transaction [%s] via %s:%s [%s] %s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status, response.error || '').red)
+          }
+          return rabbit.ack(message)
+        })
+        .catch(error => {
+        /* An error occurred */
+          Helpers.log(util.format('[INFO] Worker #%s failed to relay transaction [%s] via %s:%s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port).yellow)
+
+          const reply = { error: error.toString() }
+
+          return rabbit.reply(message, reply)
+            .then(() => { return rabbit.ack(message) })
+        })
     } else if (payload.blockBlob) {
       /* Try to relay it to the daemon */
-      daemon.submitBlock({
+      return daemon.submitBlock({
         blockBlob: payload.blockBlob
-      }).then((response) => {
-        return rabbit.sendToQueue(message.properties.replyTo, response, {
-          correlationId: message.properties.correlationId
-        })
-      }).then(() => {
-        /* We got a response to the request, we're done here */
-        Helpers.log(util.format('[INFO] Worker #%s submitted block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port).green)
-        return rabbit.ack(message)
-      }).catch((error) => {
-        /* An error occurred */
-        Helpers.log(util.format('[INFO] Worker #%s failed to submit block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port).red)
-
-        const reply = {
-          error: error.toString()
-        }
-
-        rabbit.sendToQueue(message.properties.replyTo, reply, {
-          correlationId: message.properties.correlationId
-        })
-
-        return rabbit.ack(message)
       })
+        .then(response => { return rabbit.reply(message, response) })
+        .then(() => Helpers.log(util.format('[INFO] Worker #%s submitted block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port).green))
+        .then(() => { return rabbit.ack(message) })
+        .catch(error => {
+        /* An error occurred */
+          Helpers.log(util.format('[INFO] Worker #%s failed to submit block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port).red)
+
+          const reply = {
+            error: error.toString()
+          }
+
+          return rabbit.reply(message, reply)
+            .then(() => { return rabbit.ack(message) })
+        })
     } else if (payload.walletAddress && payload.reserveSize) {
       /* Try to relay it to the daemon */
-      daemon.getBlockTemplate({
+      return daemon.getBlockTemplate({
         walletAddress: payload.walletAddress,
         reserveSize: payload.reserveSize
-      }).then((response) => {
-        return rabbit.sendToQueue(message.properties.replyTo, payload, {
-          correlationId: message.properties.correlationId
-        })
-      }).then(() => {
-        Helpers.log(util.format('[INFO] Worker #%s received blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port).green)
-        return rabbit.ack(message)
-      }).catch((error) => {
-        Helpers.log(util.format('[INFO] Worker #%s failed retrieve blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port).red)
-
-        const reply = {
-          error: error.toString()
-        }
-
-        rabbit.sendToQueue(message.properties.replyTo, reply, {
-          correlationId: message.properties.correlationId
-        })
-
-        return rabbit.ack(message)
       })
+        .then(response => { return rabbit.reply(message, response) })
+        .then(() => Helpers.log(util.format('[INFO] Worker #%s received blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port).green))
+        .then(() => { return rabbit.ack(message) })
+        .catch(error => {
+          Helpers.log(util.format('[INFO] Worker #%s failed retrieve blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port).red)
+
+          const reply = { error: error.toString() }
+
+          return rabbit.reply(message, reply)
+            .then(() => { return rabbit.ack(message) })
+        })
     } else {
       return rabbit.nack(message)
     }
   })
 
-  rabbit.connect().then(() => {
-    return rabbit.createQueue(Config.queues.relayAgent, true)
-  }).then(() => {
-    return rabbit.registerConsumer(Config.queues.relayAgent, 1)
-  }).then(() => {
-    Helpers.log(util.format('Worker #%s awaiting requests', cluster.worker.id))
-  }).catch((error) => {
-    Helpers.log(util.format('Error in worker #%s: %s', cluster.worker.id, error.toString()))
-    cluster.worker.kill()
-  })
+  rabbit.connect()
+    .then(() => { return rabbit.createQueue(Config.queues.relayAgent, true) })
+    .then(() => { return rabbit.registerConsumer(Config.queues.relayAgent, 1) })
+    .then(() => Helpers.log(util.format('Worker #%s awaiting requests', cluster.worker.id)))
+    .catch(error => {
+      Helpers.log(util.format('Error in worker #%s: %s', cluster.worker.id, error.toString()))
+      cluster.worker.kill()
+    })
 }
