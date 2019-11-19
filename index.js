@@ -83,10 +83,9 @@ if (cluster.isMaster) {
         /* An error occurred */
           Logger.error('Worker #%s failed to relay transaction [%s] via %s:%s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port)
 
-          const reply = { error: error.toString() }
+          rabbit.reply(message, { error: error.toString() })
 
-          return rabbit.reply(message, reply)
-            .then(() => { return rabbit.ack(message) })
+          return rabbit.ack(message)
         })
     } else if (payload.blockBlob) {
       /* Try to relay it to the daemon */
@@ -100,12 +99,9 @@ if (cluster.isMaster) {
         /* An error occurred */
           Logger.error('Worker #%s failed to submit block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port)
 
-          const reply = {
-            error: error.toString()
-          }
+          rabbit.reply(message, { error: error.toString() })
 
-          return rabbit.reply(message, reply)
-            .then(() => { return rabbit.ack(message) })
+          return rabbit.ack(message)
         })
     } else if (payload.walletAddress && payload.reserveSize) {
       /* Try to relay it to the daemon */
@@ -119,10 +115,9 @@ if (cluster.isMaster) {
         .catch(error => {
           Logger.error('Worker #%s failed retrieve blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port)
 
-          const reply = { error: error.toString() }
+          rabbit.reply(message, { error: error.toString() })
 
-          return rabbit.reply(message, reply)
-            .then(() => { return rabbit.ack(message) })
+          return rabbit.ack(message)
         })
     } else {
       return rabbit.nack(message)
