@@ -119,6 +119,19 @@ if (cluster.isMaster) {
 
           return rabbit.ack(message)
         })
+    } else if (payload.randomOutputs) {
+      /* Try to relay it to the daemon */
+      return daemon.getRandomOutputs(payload.randomOutputs)
+        .then(response => { return rabbit.reply(message, response) })
+        .then(() => Logger.info('Worker #%s received random outputs via %s:%s', cluster.worker.id, Config.daemon.host, Config.daemon.port))
+        .then(() => { return rabbit.ack(message) })
+        .catch(error => {
+          Logger.error('Worker #%s failed to retrieve random outputs via %s:%s', cluster.worker.id, Config.daemon.host, Config.daemon.port)
+
+          rabbit.reply(message, { error: error.toString() })
+
+          return rabbit.ack(message)
+        })
     } else {
       return rabbit.nack(message)
     }
