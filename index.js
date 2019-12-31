@@ -71,7 +71,7 @@ if (cluster.isMaster) {
         .then(resp => { response = resp })
         .then(() => { return rabbit.reply(message, response) })
         .then(() => {
-        /* We got a response to the request, we're done here */
+          /* We got a response to the request, we're done here */
           if (response.status.toUpperCase() === 'OK') {
             Logger.info('Worker #%s relayed transaction [%s] via %s:%s [%s]', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, response.status)
           } else {
