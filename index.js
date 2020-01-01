@@ -8,7 +8,6 @@ require('dotenv').config()
 const cluster = require('cluster')
 require('colors')
 const Config = require('./config.json')
-const cpuCount = Math.ceil(require('os').cpus().length / 8)
 const Logger = require('./lib/logger')
 const RabbitMQ = require('./lib/rabbit')
 const TurtleCoind = require('turtlecoin-rpc').TurtleCoind
@@ -30,9 +29,7 @@ if (cluster.isMaster) {
 
   Logger.log('Starting TurtlePay Blockchain Relay Agent...')
 
-  for (var cpuThread = 0; cpuThread < cpuCount; cpuThread++) {
-    spawnNewWorker()
-  }
+  spawnNewWorker()
 
   cluster.on('exit', (worker, code, signal) => {
     Logger.error('Worker %s died', worker.process.pid)
@@ -65,9 +62,7 @@ if (cluster.isMaster) {
       var response
 
       /* Try to relay it to the daemon */
-      return daemon.sendRawTransaction({
-        tx: payload.rawTransaction
-      })
+      return daemon.sendRawTransaction(payload.rawTransaction)
         .then(resp => { response = resp })
         .then(() => { return rabbit.reply(message, response) })
         .then(() => {
@@ -89,9 +84,7 @@ if (cluster.isMaster) {
         })
     } else if (payload.blockBlob) {
       /* Try to relay it to the daemon */
-      return daemon.submitBlock({
-        blockBlob: payload.blockBlob
-      })
+      return daemon.submitBlock(payload.blockBlob)
         .then(response => { return rabbit.reply(message, response) })
         .then(() => Logger.info('Worker #%s submitted block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port))
         .then(() => { return rabbit.ack(message) })
@@ -105,10 +98,7 @@ if (cluster.isMaster) {
         })
     } else if (payload.walletAddress && payload.reserveSize) {
       /* Try to relay it to the daemon */
-      return daemon.getBlockTemplate({
-        walletAddress: payload.walletAddress,
-        reserveSize: payload.reserveSize
-      })
+      return daemon.blockTemplate(payload.walletAddress, payload.reserveSize)
         .then(response => { return rabbit.reply(message, response) })
         .then(() => Logger.info('Worker #%s received blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port))
         .then(() => { return rabbit.ack(message) })
@@ -121,7 +111,7 @@ if (cluster.isMaster) {
         })
     } else if (payload.randomOutputs) {
       /* Try to relay it to the daemon */
-      return daemon.getRandomOutputs(payload.randomOutputs)
+      return daemon.randomOutputs(payload.randomOutputs.amounts || [], payload.randomOutputs.mixin || 0)
         .then(response => { return rabbit.reply(message, response) })
         .then(() => Logger.info('Worker #%s received random outputs via %s:%s %s', cluster.worker.id, Config.daemon.host, Config.daemon.port, JSON.stringify(payload.randomOutputs.amounts)))
         .then(() => { return rabbit.ack(message) })
