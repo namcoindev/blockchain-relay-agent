@@ -75,12 +75,10 @@ if (cluster.isMaster) {
         })
         .then(() => { return rabbit.ack(message) })
         .catch(error => {
-        /* An error occurred */
-          Logger.error('Worker #%s failed to relay transaction [%s] via %s:%s', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port)
+          /* An error occurred */
+          Logger.error('Worker #%s failed to relay transaction [%s] via %s:%s [%s]', cluster.worker.id, payload.hash, Config.daemon.host, Config.daemon.port, error.toString())
 
-          rabbit.reply(message, { error: error.toString() })
-
-          return rabbit.ack(message)
+          return rabbit.nack(message)
         })
     } else if (payload.blockBlob) {
       /* Try to relay it to the daemon */
@@ -89,12 +87,10 @@ if (cluster.isMaster) {
         .then(() => Logger.info('Worker #%s submitted block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port))
         .then(() => { return rabbit.ack(message) })
         .catch(error => {
-        /* An error occurred */
-          Logger.error('Worker #%s failed to submit block [%s] via %s:%s', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port)
+          /* An error occurred */
+          Logger.error('Worker #%s failed to submit block [%s] via %s:%s [%s]', cluster.worker.id, payload.blockBlob, Config.daemon.host, Config.daemon.port, error.toString())
 
-          rabbit.reply(message, { error: error.toString() })
-
-          return rabbit.ack(message)
+          return rabbit.nack(message)
         })
     } else if (payload.walletAddress && payload.reserveSize) {
       /* Try to relay it to the daemon */
@@ -103,11 +99,10 @@ if (cluster.isMaster) {
         .then(() => Logger.info('Worker #%s received blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port))
         .then(() => { return rabbit.ack(message) })
         .catch(error => {
-          Logger.error('Worker #%s failed retrieve blocktemplate for [%s] via %s:%s', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port)
+          /* An error occurred */
+          Logger.error('Worker #%s failed retrieve blocktemplate for [%s] via %s:%s [%s]', cluster.worker.id, payload.walletAddress, Config.daemon.host, Config.daemon.port, error.toString())
 
-          rabbit.reply(message, { error: error.toString() })
-
-          return rabbit.ack(message)
+          return rabbit.nack(message)
         })
     } else if (payload.randomOutputs) {
       /* Try to relay it to the daemon */
@@ -116,11 +111,10 @@ if (cluster.isMaster) {
         .then(() => Logger.info('Worker #%s received random outputs via %s:%s %s', cluster.worker.id, Config.daemon.host, Config.daemon.port, JSON.stringify(payload.randomOutputs.amounts)))
         .then(() => { return rabbit.ack(message) })
         .catch(error => {
-          Logger.error('Worker #%s failed to retrieve random outputs via %s:%s %s', cluster.worker.id, Config.daemon.host, Config.daemon.port, JSON.stringify(payload.randomOutputs.amounts))
+          /* An error occurred */
+          Logger.error('Worker #%s failed to retrieve random outputs via %s:%s %s [%s]', cluster.worker.id, Config.daemon.host, Config.daemon.port, JSON.stringify(payload.randomOutputs.amounts), error.toString())
 
-          rabbit.reply(message, { error: error.toString() })
-
-          return rabbit.ack(message)
+          return rabbit.nack(message)
         })
     } else {
       return rabbit.nack(message)
