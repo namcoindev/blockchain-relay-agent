@@ -1,7 +1,7 @@
 {
   "name": "turtlepay-bra",
   "version": "0.0.5",
-  "description": "TurtlePay: Blockchain Relay Agent",
+  "description": "NamPay: Blockchain Relay Agent",
   "main": "index.js",
   "scripts": {
     "test": "standard",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TurtlePay/blockchain-relay-agent.git"
+    "url": "git+https://github.com/namcoindev/blockchain-relay-agent.git"
   },
   "keywords": [
     "TurtlePay"
@@ -21,9 +21,9 @@
   },
   "engineStrict": true,
   "bugs": {
-    "url": "https://github.com/TurtlePay/blockchain-relay-agent/issues"
+    "url": "https://github.com/namcoindev/blockchain-relay-agent/issues"
   },
-  "homepage": "https://github.com/TurtlePay/blockchain-relay-agent#readme",
+  "homepage": "https://github.com/namcoindev/blockchain-relay-agent#readme",
   "dependencies": {
     "amqplib": "^0.5.6",
     "colors": "^1.3.3",
