@@ -1,7 +1,7 @@
 {
   "daemon": {
     "host": "localhost",
-    "port": 11898,
+    "port": 11778,
     "timeout": 8000
   },
   "queues": {
