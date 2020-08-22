@@ -1,7 +1,7 @@
-# TurtlePay®: Blockchain Relay Agent
+# NamCoin: Blockchain Relay Agent
 ![Version](https://img.shields.io/badge/version-0.0.1-blue.svg?cacheSeconds=2592000) ![Prerequisite](https://img.shields.io/badge/node-%3E%3D6-blue.svg) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/TurtlePay/blockchain-relay-agent/graphs/commit-activity) [![License: AGPL-3.0](https://img.shields.io/badge/license-AGL--3.0-yellow.svg)](https://github.com/TurtlePay/blockchain-relay-agent/blob/master/LICENSE) [![Twitter: TurtlePay](https://img.shields.io/twitter/follow/TurtlePay.svg?style=social)](https://twitter.com/TurtlePay)
 
-> RabbitMQ agent that relays information to/from TurtleCoind to interact with the TurtleCoin® network.
+> RabbitMQ agent that relays information to/from NamCoind to interact with the NamCoin network.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ npm install
 {
   "daemon": {
     "host": "localhost",
-    "port": 11898
+    "port": 11778
   },
   "queues": {
     "relayAgent": "request.network"
